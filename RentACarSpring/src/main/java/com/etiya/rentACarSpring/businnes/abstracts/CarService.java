@@ -37,5 +37,5 @@ public interface CarService {
 
 	DataResult<List<CarSearchListDto>> getCarByCityId(Integer cityId);
 
-	Result checkCarExists (int id);
+	Result checkCarExistsInGallery(int id);
 }
