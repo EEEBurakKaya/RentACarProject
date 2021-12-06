@@ -1,10 +1,10 @@
 package com.etiya.rentACarSpring.businnes.concretes;
 
-import com.etiya.rentACarSpring.businnes.abstracts.MessageService;
+import com.etiya.rentACarSpring.businnes.dtos.CorparateCustomerSearchListDto;
+import com.etiya.rentACarSpring.businnes.dtos.RentalSearchListDto;
 import com.etiya.rentACarSpring.core.utilities.businnessRules.BusinnessRules;
-import com.etiya.rentACarSpring.core.utilities.results.ErrorResult;
-import com.etiya.rentACarSpring.entities.Message;
-import org.aspectj.bridge.IMessage;
+import com.etiya.rentACarSpring.core.utilities.results.*;
+import com.etiya.rentACarSpring.entities.Rental;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,24 +13,33 @@ import com.etiya.rentACarSpring.businnes.request.CorparateCustomerRequest.Create
 import com.etiya.rentACarSpring.businnes.request.CorparateCustomerRequest.DeleteCorparateRequest;
 import com.etiya.rentACarSpring.businnes.request.CorparateCustomerRequest.UpdateCorparateRequest;
 import com.etiya.rentACarSpring.core.utilities.mapping.ModelMapperService;
-import com.etiya.rentACarSpring.core.utilities.results.Result;
-import com.etiya.rentACarSpring.core.utilities.results.SuccesResult;
 import com.etiya.rentACarSpring.dataAccess.abstracts.CorparateCustomerDao;
 import com.etiya.rentACarSpring.entities.CorparateCustomer;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CorparateCustomerManager implements CorparateCustomerService {
 
     private CorparateCustomerDao corparateCustomerDao;
     private ModelMapperService modelMapperService;
-    private MessageService messageService;
 
     @Autowired
-    public CorparateCustomerManager(CorparateCustomerDao corparateCustomerDao, ModelMapperService modelMapperService,MessageService messageService) {
+    public CorparateCustomerManager(CorparateCustomerDao corparateCustomerDao, ModelMapperService modelMapperService) {
         super();
         this.corparateCustomerDao = corparateCustomerDao;
         this.modelMapperService = modelMapperService;
-        this.messageService = messageService;
+    }
+
+    @Override
+    public DataResult<List<CorparateCustomerSearchListDto>> getAll() {
+        List<CorparateCustomer> result = this.corparateCustomerDao.findAll();
+        List<CorparateCustomerSearchListDto> response = result.stream()
+                .map(corparateCustomer -> modelMapperService.forDto().map(corparateCustomer, CorparateCustomerSearchListDto.class))
+                .collect(Collectors.toList());
+
+        return new SuccesDataResult<List<CorparateCustomerSearchListDto>>(response);
     }
 
     @Override
@@ -42,7 +51,7 @@ public class CorparateCustomerManager implements CorparateCustomerService {
 
         CorparateCustomer corparateCustomer = modelMapperService.forRequest().map(createCorparateRequest, CorparateCustomer.class);
         this.corparateCustomerDao.save(corparateCustomer);
-        return new SuccesResult(messageService.getByMessageByMessageId(1));
+        return new SuccesResult("Ekleme İslemi Basarili");
     }
 
     @Override

@@ -1,21 +1,16 @@
 package com.etiya.rentACarSpring.businnes.dtos;
 
-import java.sql.Date;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.Column;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CarMaintenanceSearchListDto {
+public class ColorSearchListDto {
+    private int colorId;
 
-	private int carMaintenanseId;
-
-	private Date maintananceDate;
-
-	private Date returnDate;
-
-	private int carCarId;
+    private String colorName;
 }
