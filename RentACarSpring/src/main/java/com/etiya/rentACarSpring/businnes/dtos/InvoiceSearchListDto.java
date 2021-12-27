@@ -22,7 +22,5 @@ public class InvoiceSearchListDto {
 	private Double totalPrice;
 
 	private int totalRentDay;
-
-	private int rentalId;
 	
 }

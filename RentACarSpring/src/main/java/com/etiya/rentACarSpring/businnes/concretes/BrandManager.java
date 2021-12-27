@@ -1,15 +1,12 @@
 package com.etiya.rentACarSpring.businnes.concretes;
 
-import com.etiya.rentACarSpring.businnes.abstracts.MessageService;
 import com.etiya.rentACarSpring.businnes.dtos.BrandSearchListDto;
-import com.etiya.rentACarSpring.businnes.dtos.RentalSearchListDto;
 import com.etiya.rentACarSpring.core.utilities.results.*;
-import com.etiya.rentACarSpring.entities.Rental;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.etiya.rentACarSpring.businnes.abstracts.BrandService;
-import com.etiya.rentACarSpring.businnes.constants.Messages;
 import com.etiya.rentACarSpring.businnes.request.BrandRequest.CreateBrandRequest;
 import com.etiya.rentACarSpring.businnes.request.BrandRequest.DeleteBrandRequest;
 import com.etiya.rentACarSpring.businnes.request.BrandRequest.UpdateBrandRequest;
@@ -26,14 +23,12 @@ public class BrandManager implements BrandService {
 
     private BrandDao brandDao;
     private ModelMapperService modelMapperService;
-    private MessageService messageService;
 
     @Autowired
-    public BrandManager(BrandDao brandDao, ModelMapperService modelMapperService, MessageService messageService) {
+    public BrandManager(BrandDao brandDao, ModelMapperService modelMapperService) {
         super();
         this.brandDao = brandDao;
         this.modelMapperService = modelMapperService;
-        this.messageService = messageService;
     }
 
     @Override
@@ -48,7 +43,8 @@ public class BrandManager implements BrandService {
 
     @Override
     public Result save(CreateBrandRequest createBrandRequest) {
-        Result result = BusinnessRules.run(checkBrandNameDublicated(createBrandRequest.getBrandName()));
+        Result result = BusinnessRules.run(checkBrandNameDublicated(createBrandRequest.getBrandName())
+               );
         if (result != null) {
             return result;
         }
@@ -56,35 +52,49 @@ public class BrandManager implements BrandService {
         Brand brand = modelMapperService.forRequest().map(createBrandRequest, Brand.class);
         this.brandDao.save(brand);
 
-        return new SuccesResult(messageService.getByEnglishMessageByMessageId(1));
+        return new SuccesResult();
     }
 
     @Override
     public Result update(UpdateBrandRequest updateBrandRequest) {
-        Result result = BusinnessRules.run(checkBrandNameDublicated(updateBrandRequest.getBrandName()));
+        Result result = BusinnessRules.run(checkIfBrandExists(updateBrandRequest.getBrandId()));
         if (result != null) {
             return result;
         }
 
         Brand brand = modelMapperService.forRequest().map(updateBrandRequest, Brand.class);
         this.brandDao.save(brand);
-        return new SuccesResult(messageService.getByEnglishMessageByMessageId(2));
+        return new SuccesResult();
     }
 
     @Override
     public Result delete(DeleteBrandRequest deleteBrandRequest) {
+        Result result = BusinnessRules.run(checkIfBrandExists(deleteBrandRequest.getBrandId()));
+        if (result != null) {
+            return result;
+        }
 
         this.brandDao.deleteById(deleteBrandRequest.getBrandId());
-        return new SuccesResult(messageService.getByEnglishMessageByMessageId(3));
+        return new SuccesResult();
+    }
+
+
+    private Result checkIfBrandExists(int brandId) {
+        if (!this.brandDao.existsById(brandId)) {
+            return new ErrorResult("brand Id bulunamadı");
+        }
+        return new SuccesResult();
     }
 
     private Result checkBrandNameDublicated(String brandName) {
         Brand brand = this.brandDao.getByBrandName(brandName);
         if (brand != null) {
-            return new ErrorResult(messageService.getByEnglishMessageByMessageId(4));
+            return new ErrorResult();
         }
 
         return new SuccesResult();
     }
+
+
 
 }
