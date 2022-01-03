@@ -1,14 +1,16 @@
 package com.etiya.rentACarSpring.businnes.concretes;
 
+import com.etiya.rentACarSpring.businnes.abstracts.message.LanguageWordService;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import com.etiya.rentACarSpring.businnes.abstracts.AuthService;
 import com.etiya.rentACarSpring.businnes.abstracts.CorparateCustomerService;
 import com.etiya.rentACarSpring.businnes.abstracts.IndividualCustomerService;
 import com.etiya.rentACarSpring.businnes.abstracts.UserService;
-import com.etiya.rentACarSpring.businnes.constants.Messages;
+import com.etiya.rentACarSpring.businnes.abstracts.constants.Messages;
 import com.etiya.rentACarSpring.businnes.request.AuthRequest.CorparateRegisterRequest;
 import com.etiya.rentACarSpring.businnes.request.AuthRequest.IndividualRegisterRequest;
 import com.etiya.rentACarSpring.businnes.request.AuthRequest.LoginRequest;
@@ -30,17 +32,22 @@ public class AuthManager implements AuthService {
     private CorparateCustomerService corparateCustomerService;
     private ModelMapperService modelMapperService;
     private findexScoreService findexScoreService;
+    private Environment environment;
+    private LanguageWordService languageWordService;
 
     @Autowired
     public AuthManager(UserService userService, IndividualCustomerService individualCustomerService,
                        CorparateCustomerService corparateCustomerService, ModelMapperService modelMapperService,
-                       findexScoreService findexScoreService) {
+                       findexScoreService findexScoreService, Environment environment,
+                       LanguageWordService languageWordService) {
         super();
         this.userService = userService;
         this.individualCustomerService = individualCustomerService;
         this.corparateCustomerService = corparateCustomerService;
         this.modelMapperService = modelMapperService;
         this.findexScoreService = findexScoreService;
+        this.environment = environment;
+        this.languageWordService = languageWordService;
 
     }
 
@@ -58,7 +65,7 @@ public class AuthManager implements AuthService {
         crateCreateIndividualCustomerRequest.setFindexScore(findexScoreService.getIndividualFindexScore(individualRegisterRequest.getIdentityNumber()));
         this.individualCustomerService.save(crateCreateIndividualCustomerRequest);
 
-        return new SuccesResult(Messages.individualRegister);
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.IndividualCustomerRegisterSuccessful));
     }
 
     @Override
@@ -72,24 +79,24 @@ public class AuthManager implements AuthService {
                 CreateCorparateRequest.class);
         createCorparateRequest.setFindexScore(findexScoreService.getCorparateFindexScore(corparateRegisterRequest.getTaxNumber()));
         this.corparateCustomerService.add(createCorparateRequest);
-        return new SuccesResult(Messages.corparateRegister);
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.CorporateCustomerRegisterSuccessful));
     }
 
     @Override
     public Result login(LoginRequest loginRequest) {
-        var result = BusinnessRules.run(checkCustomerEmailIsTrue(loginRequest), checkCustomerPasswordIsTrue(loginRequest));
+        Result result = BusinnessRules.run(checkCustomerEmailIsTrue(loginRequest), checkCustomerPasswordIsTrue(loginRequest));
 
         if (result != null) {
             return result;
         }
 
-        return new SuccesResult(Messages.login);
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.LoginSuccessful));
     }
 
     @Override
     public Result checkCustomerEmailIsTrue(LoginRequest loginRequest) {
         if (this.userService.existByEmail(loginRequest.getEmail()).isSuccess()) {
-            return new ErrorResult(Messages.mailDontFind);
+            return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.MailNotValid));
         }
         return new SuccesResult();
     }
@@ -100,15 +107,15 @@ public class AuthManager implements AuthService {
 
             if (!this.userService.getByEmail(loginRequest.getEmail()).getData().getPassword()
                     .equals(loginRequest.getPassword())) {
-                return new ErrorResult("Hatalı Şifre Girdiniz!");
+                return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.PasswordWrong));
             }
         }
         return new SuccesResult();
     }
 
-    private Result checkEmailIfExists(String email) {
+    public Result checkEmailIfExists(String email) {
         if (!this.userService.existByEmail(email).isSuccess()) {
-            return new ErrorResult("Mail Adresi Zaten bulunmaktadır.");
+            return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.MailAlreadyExists));
         }
         return new SuccesResult();
     }

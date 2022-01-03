@@ -5,6 +5,7 @@ import java.sql.Date;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
+import com.etiya.rentACarSpring.businnes.request.CreditCardRentalRequest;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -17,7 +18,7 @@ import org.springframework.lang.Nullable;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CreateRentalRequest {
-	
+
 	@JsonIgnore
 	private int rentalId;
 
@@ -33,7 +34,4 @@ public class CreateRentalRequest {
 
 	private int takeCityId;
 
-
-
-	
 }

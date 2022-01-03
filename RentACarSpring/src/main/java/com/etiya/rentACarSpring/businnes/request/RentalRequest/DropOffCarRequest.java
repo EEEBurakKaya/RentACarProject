@@ -23,8 +23,6 @@ public class DropOffCarRequest {
 
 	private int returnKilometer;
 
-	//private int carId;
-
 	private CreditCardRentalRequest creditCardRentalRequest;
 
 

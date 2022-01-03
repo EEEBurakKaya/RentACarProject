@@ -8,11 +8,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.etiya.rentACarSpring.businnes.abstracts.CarService;
+import com.etiya.rentACarSpring.businnes.abstracts.message.LanguageWordService;
+import com.etiya.rentACarSpring.businnes.abstracts.constants.Messages;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.etiya.rentACarSpring.businnes.abstracts.ImageService;
-import com.etiya.rentACarSpring.businnes.constants.FilePath;
+import com.etiya.rentACarSpring.businnes.abstracts.constants.FilePath;
 import com.etiya.rentACarSpring.businnes.dtos.ImageSearchListDto;
 import com.etiya.rentACarSpring.businnes.request.ImageRequest.CreateImageRequest;
 import com.etiya.rentACarSpring.businnes.request.ImageRequest.DeleteImageRequest;
@@ -37,20 +39,23 @@ public class ImageManager implements ImageService {
     private FileHelper fileHelper;
     private ModelMapperService modelMapperService;
     private CarService carService;
+    private LanguageWordService languageWordService;
 
     @Autowired
-    public ImageManager(ImageDao imageDao, FileHelper fileHelper, ModelMapperService modelMapperService, CarService carService) {
+    public ImageManager(ImageDao imageDao, FileHelper fileHelper, ModelMapperService modelMapperService,
+                        CarService carService, LanguageWordService languageWordService) {
         super();
         this.imageDao = imageDao;
         this.fileHelper = fileHelper;
         this.modelMapperService = modelMapperService;
         this.carService = carService;
+        this.languageWordService = languageWordService;
     }
 
     @Override
     public Result add(CreateImageRequest createImageRequest) throws IOException {
 
-        var result = BusinnessRules.run(checkCarImagesCount(createImageRequest.getCarId(), 5),
+        Result result = BusinnessRules.run(checkCarImagesCount(createImageRequest.getCarId(), 5),
                 this.fileHelper.checkImageType(createImageRequest.getFile()),
                 checkIfCarIsNotExistsInGallery(createImageRequest.getCarId()));
 
@@ -59,27 +64,22 @@ public class ImageManager implements ImageService {
         }
 
         Date dateNow = new java.sql.Date(new java.util.Date().getTime()); // Anlık zamanı alıp bir değişkene atıyor.
-
         Car car = modelMapperService.forRequest().map(createImageRequest, Car.class);
-
         Image image = new Image();
         image.setImageUrl(
                 this.fileHelper.uploadImage(createImageRequest.getCarId(), createImageRequest.getFile()).getMessage());
 
         image.setDate(dateNow);
-
         image.setCar(car);
-
         this.imageDao.save(image);
-
-        return new SuccesResult("Car Görseli Eklendi");
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.CarImageUploaded));
     }
 
     @Override
     public Result update(UpdateImageRequest updateImageRequest) throws IOException {
         Image image = this.imageDao.getById(updateImageRequest.getImageId());
 
-        var result = BusinnessRules.run(checkCarImagesCount(image.getCar().getCarId(), 6),
+        Result result = BusinnessRules.run(checkCarImagesCount(image.getCar().getCarId(), 6),
                 this.fileHelper.checkImageType(updateImageRequest.getFile()),
                 checkIfImageExists(updateImageRequest.getImageId()));
 
@@ -94,7 +94,22 @@ public class ImageManager implements ImageService {
 
         this.imageDao.save(image);
 
-        return new SuccesResult("güncellendi");
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.CarImageUpdated));
+    }
+
+    @Override
+    public Result delete(DeleteImageRequest deleteImageRequest) {
+        Result result = BusinnessRules.run(checkIfImageExists(deleteImageRequest.getImageId())
+        );
+        if (result != null) {
+            return result;
+        }
+
+        Image image = this.imageDao.getById(deleteImageRequest.getImageId());
+
+        this.imageDao.delete(image);
+        this.fileHelper.deleteImage(image.getImageUrl());
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.CarImageDeleted));
     }
 
     @Override
@@ -105,12 +120,12 @@ public class ImageManager implements ImageService {
                 .map(carImage -> modelMapperService.forDto().map(carImage, ImageSearchListDto.class))
                 .collect(Collectors.toList());
 
-        return new SuccesDataResult<List<ImageSearchListDto>>(imageSearchListDto);
+        return new SuccesDataResult<List<ImageSearchListDto>>(imageSearchListDto, languageWordService.getByLanguageAndKeyId(Messages.ImageByCarIdListed));
     }
 
     private Result checkCarImagesCount(int CarId, int limit) {
         if (this.imageDao.countByCar_CarId(CarId) >= limit) {
-            return new ErrorResult("Hata");
+            return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.CarImageCountLimitExceed));
         }
         return new SuccesResult();
     }
@@ -127,20 +142,10 @@ public class ImageManager implements ImageService {
 
         carImages.add(carImage);
 
-        return new SuccesDataResult<List<Image>>(carImages, "Araba Listelendi");
+        return new SuccesDataResult<List<Image>>(carImages, languageWordService.getByLanguageAndKeyId(Messages.CarImageListed));
 
     }
 
-    @Override
-    public Result delete(DeleteImageRequest deleteImageRequest) {
-        Image image = this.imageDao.getById(deleteImageRequest.getImageId());
-
-        this.imageDao.delete(image);
-
-        this.fileHelper.deleteImage(image.getImageUrl());
-
-        return new SuccesResult("Resim Silindi");
-    }
 
     @Override
     public DataResult<List<ImageSearchListDto>> getAll() {
@@ -150,13 +155,13 @@ public class ImageManager implements ImageService {
                 .map(image -> modelMapperService.forDto().map(image, ImageSearchListDto.class))
                 .collect(Collectors.toList());
 
-        return new SuccesDataResult<List<ImageSearchListDto>>(response);
+        return new SuccesDataResult<List<ImageSearchListDto>>(response, languageWordService.getByLanguageAndKeyId(Messages.CarImageListed));
 
     }
 
     private Result checkIfImageExists(int imageId) {
         if (!this.imageDao.existsById(imageId)) {
-            return new ErrorResult("Böyle bir resim veritabanında bulunmamaktadır.");
+            return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.CarImageNotFound));
         }
         return new SuccesResult();
 
@@ -164,7 +169,7 @@ public class ImageManager implements ImageService {
 
     private Result checkIfCarIsNotExistsInGallery(int carId) {
         if (!this.carService.checkCarExistsInGallery(carId).isSuccess()) {
-            return new ErrorResult("Böyle bir araba galeride bulunmamaktadır.");
+            return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.CarNotFound));
         }
         return new SuccesResult();
     }

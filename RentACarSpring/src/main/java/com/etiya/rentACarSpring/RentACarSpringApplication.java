@@ -6,7 +6,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.etiya.rentACarSpring.businnes.abstracts.message.LanguageWordService;
+import com.etiya.rentACarSpring.businnes.abstracts.constants.Messages;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -35,71 +38,75 @@ import javax.persistence.EntityNotFoundException;
 @RestControllerAdvice
 public class RentACarSpringApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(RentACarSpringApplication.class, args);
-	}
-	
-	@Bean
-    public Docket api() { 
-        return new Docket(DocumentationType.SWAGGER_2)  
-          .select()                                  
-          .apis(RequestHandlerSelectors.basePackage("com.etiya.rentACarSpring"))                                     
-          .build();                                           
+    @Autowired
+    private LanguageWordService languageWordService;
+
+    public static void main(String[] args) {
+        SpringApplication.run(RentACarSpringApplication.class, args);
     }
-	
-	@Bean 
-	public ModelMapper getModelMapper() {
-		ModelMapper modelMapper=new ModelMapper();
-		return modelMapper;
-	}
-	
-	@ExceptionHandler(MethodArgumentNotValidException.class)
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	public ErrorDataResult<Object> handleValidationException(MethodArgumentNotValidException excepiton){
-		Map<String,String> validationErrors=new HashMap<String, String>();
-		
-		for(FieldError fieldError:excepiton.getBindingResult().getFieldErrors()) {
-			validationErrors.put(fieldError.getField(),fieldError.getDefaultMessage());
-		}
-		ErrorDataResult<Object> error=new ErrorDataResult<Object>(validationErrors,"Validation Error");
-		return error;
-	}
-	
-	@ExceptionHandler
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	public ErrorResult handleNoSuchElementException(NoSuchElementException exception){
-		
-		ErrorResult error = new ErrorResult("Kayıt bulunamadı.");
-		return error;
-	}
 
-	@ExceptionHandler(EntityNotFoundException.class)
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	public  ErrorResult handleEntityNotFoundException(EntityNotFoundException exception){
-		ErrorResult error=new ErrorResult("Böyle bir kayıt bulunmamaktadır.");
-		return  error;
-	}
+    @Bean
+    public Docket api() {
+        return new Docket(DocumentationType.SWAGGER_2)
+                .select()
+                .apis(RequestHandlerSelectors.basePackage("com.etiya.rentACarSpring"))
+                .build();
+    }
 
-	@ExceptionHandler(EmptyResultDataAccessException.class)
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	public  ErrorResult EmptyResultDataAccessException(EmptyResultDataAccessException exception){
-		ErrorResult error=new ErrorResult("Böyle bir kayıt bulunmamaktadır.");
-		return  error;
-	}
+    @Bean
+    public ModelMapper getModelMapper() {
+        ModelMapper modelMapper = new ModelMapper();
+        return modelMapper;
+    }
 
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorDataResult<Object> handleValidationException(MethodArgumentNotValidException excepiton) {
+        Map<String, String> validationErrors = new HashMap<String, String>();
 
+        for (FieldError fieldError : excepiton.getBindingResult().getFieldErrors()) {
+            validationErrors.put(fieldError.getField(), fieldError.getDefaultMessage());
+        }
+        ErrorDataResult<Object> error = new ErrorDataResult<Object>(validationErrors,
+                this.languageWordService.getByLanguageAndKeyId(Messages.ValidationErrors));
+        return error;
+    }
 
-	@ExceptionHandler(HttpMessageNotReadableException.class)
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	public  ErrorResult EmptyResultDataAccessException(HttpMessageNotReadableException exception){
-		ErrorResult error=new ErrorResult("Veri girişi yapılırken Json formatında hata oluştu.");
-		return  error;
-	}
+    @ExceptionHandler
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResult handleNoSuchElementException(NoSuchElementException exception) {
 
+        ErrorResult error = new ErrorResult( this.languageWordService.getByLanguageAndKeyId(Messages.NoSuchElementException));
+        return error;
+    }
 
+    @ExceptionHandler(EntityNotFoundException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResult handleEntityNotFoundException(EntityNotFoundException exception) {
+        ErrorResult error = new ErrorResult( this.languageWordService.getByLanguageAndKeyId(Messages.EntityNotFoundException));
+        return error;
+    }
 
+    @ExceptionHandler(EmptyResultDataAccessException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResult EmptyResultDataAccessException(EmptyResultDataAccessException exception) {
+        ErrorResult error = new ErrorResult( this.languageWordService.getByLanguageAndKeyId(Messages.EmptyResultDataAccessException));
+        return error;
+
+    }
 
 
-	
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResult EmptyResultDataAccessException(HttpMessageNotReadableException exception) {
+        ErrorResult error = new ErrorResult( this.languageWordService.getByLanguageAndKeyId(Messages.HttpMessageNotReadableException));
+        return error;
+    }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResult DataIntegrityViolationException(DataIntegrityViolationException exception) {
+        ErrorResult error = new ErrorResult( this.languageWordService.getByLanguageAndKeyId(Messages.DataIntegrityViolationException));
+        return error;
+    }
 }

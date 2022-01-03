@@ -14,4 +14,6 @@ public interface WordService {
     Result save(CreateWordRequest createWordRequest);
     Result update(UpdateWordRequest updateWordRequest);
     Result delete(DeleteWordRequest deleteWordRequest);
+    Result checkWordIdExists(int wordId);
+    Result checkKeyExists(String key);
 }

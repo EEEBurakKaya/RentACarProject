@@ -1,14 +1,18 @@
 package com.etiya.rentACarSpring.businnes.concretes;
 
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.etiya.rentACarSpring.businnes.abstracts.CarService;
+import com.etiya.rentACarSpring.businnes.abstracts.message.LanguageWordService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import com.etiya.rentACarSpring.businnes.abstracts.CarMaintenanceService;
 import com.etiya.rentACarSpring.businnes.abstracts.RentalService;
-import com.etiya.rentACarSpring.businnes.constants.Messages;
+import com.etiya.rentACarSpring.businnes.abstracts.constants.Messages;
 import com.etiya.rentACarSpring.businnes.dtos.CarMaintenanceSearchListDto;
 import com.etiya.rentACarSpring.businnes.request.CarMaintenanceRequest.CreateCarMaintenanceRequest;
 import com.etiya.rentACarSpring.businnes.request.CarMaintenanceRequest.DeleteCarMaintenanceRequest;
@@ -30,14 +34,21 @@ public class CarMaintenanceManager implements CarMaintenanceService {
     private CarMaintenanceDao carMaintenanceDao;
     private ModelMapperService modelMapperService;
     private RentalService rentalService;
+    private Environment environment;
+    private LanguageWordService languageWordService;
+    private CarService carService;
 
     @Autowired
     public CarMaintenanceManager(CarMaintenanceDao carMaintenanceDao, ModelMapperService modelMapperService,
-                                 RentalService rentalService) {
+                                 RentalService rentalService, Environment environment,LanguageWordService languageWordService,
+                                 CarService carService) {
         super();
         this.carMaintenanceDao = carMaintenanceDao;
         this.modelMapperService = modelMapperService;
         this.rentalService = rentalService;
+        this.environment = environment;
+        this.languageWordService = languageWordService;
+        this.carService = carService;
     }
 
     @Override
@@ -47,7 +58,7 @@ public class CarMaintenanceManager implements CarMaintenanceService {
                         carMaintenance -> modelMapperService.forDto().map(carMaintenance, CarMaintenanceSearchListDto.class))
                 .collect(Collectors.toList());
 
-        return new SuccesDataResult<List<CarMaintenanceSearchListDto>>(response);
+        return new SuccesDataResult<List<CarMaintenanceSearchListDto>>(response, languageWordService.getByLanguageAndKeyId(Messages.CarMaintenanceListed));
     }
 
     @Override
@@ -61,21 +72,38 @@ public class CarMaintenanceManager implements CarMaintenanceService {
         CarMaintenance carMaintenance = modelMapperService.forRequest().map(createCarMaintenanceRequest,
                 CarMaintenance.class);
         this.carMaintenanceDao.save(carMaintenance);
-        return new SuccesResult("Ekleme İslemi Basarili");
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.CarMaintenanceAdded));
     }
 
     @Override
     public Result update(UpdateCarMaintenanceRequest updateCarMaintenanceRequest) {
-        CarMaintenance carMaintenance = modelMapperService.forRequest().map(updateCarMaintenanceRequest,
+        CarMaintenance carMaintenance=this.carMaintenanceDao.getById(updateCarMaintenanceRequest.getCarMaintenanceId());
+        Result result = BusinnessRules.run(checkDate(carMaintenance.getMaintananceDate(),updateCarMaintenanceRequest.getReturnDate()),
+                carService.checkCarExistsInGallery(updateCarMaintenanceRequest.getCarId()),
+                checkIfCarMaintenanceExists(updateCarMaintenanceRequest.getCarMaintenanceId()));
+
+        if (result != null) {
+            return result;
+        }
+        CarMaintenance updatedCarMaintenance = modelMapperService.forRequest().map(updateCarMaintenanceRequest,
                 CarMaintenance.class);
-        this.carMaintenanceDao.save(carMaintenance);
-        return new SuccesResult(Messages.updatedColor);
+
+        updatedCarMaintenance.setCar(carMaintenance.getCar());
+        updatedCarMaintenance.setMaintananceDate(carMaintenance.getMaintananceDate());
+        this.carMaintenanceDao.save(updatedCarMaintenance);
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.CarMaintenanceUpdated));
     }
 
     @Override
     public Result delete(DeleteCarMaintenanceRequest deleteCarMaintenanceRequest) {
-        this.carMaintenanceDao.deleteById(deleteCarMaintenanceRequest.getCarMaintenanseId());
-        return new SuccesResult(Messages.deletedColor);
+        Result result = BusinnessRules.run(
+                checkIfCarMaintenanceExists(deleteCarMaintenanceRequest.getCarMaintenanceId()));
+
+        if (result != null) {
+            return result;
+        }
+        this.carMaintenanceDao.deleteById(deleteCarMaintenanceRequest.getCarMaintenanceId());
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.CarMaintenanceDeleted));
     }
 
     @Override
@@ -89,7 +117,7 @@ public class CarMaintenanceManager implements CarMaintenanceService {
         if (result != null) {
             for (CarMaintenance carMaintenances : this.carMaintenanceDao.getByCar_CarId(carId)) {
                 if (carMaintenances.getReturnDate() == null) {
-                    return new ErrorResult("Araç bakımdadır..");
+                    return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.CarIsAlreadyOnMaintenance));
                 }
             }
         }
@@ -99,9 +127,22 @@ public class CarMaintenanceManager implements CarMaintenanceService {
     private Result checkIfCarIsRentedNow(int carId) {
         Result isCarReturned = rentalService.checkCarRentalStatus(carId);
         if (!isCarReturned.isSuccess()) {
-            return new ErrorResult("Araç kirada olduğu için bakıma gönderilemez.");
+            return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.CarIsOnRent));
         }
         return new SuccesResult();
     }
 
+    private Result checkDate(Date maintananceDate, Date returnDate){
+        if (maintananceDate.compareTo(returnDate)<0){
+            return new SuccesResult();
+        }
+        return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.InvalidReturnMaintenanceDate));
+    }
+
+    private Result checkIfCarMaintenanceExists(int maintenanceId) {
+        if (!this.carMaintenanceDao.existsById(maintenanceId)) {
+            return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.CarMaintenanceNotFound));
+        }
+        return new SuccesResult();
+    }
 }

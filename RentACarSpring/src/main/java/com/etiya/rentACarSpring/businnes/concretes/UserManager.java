@@ -3,7 +3,10 @@ package com.etiya.rentACarSpring.businnes.concretes;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.etiya.rentACarSpring.businnes.abstracts.message.LanguageWordService;
+import com.etiya.rentACarSpring.businnes.abstracts.constants.Messages;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import com.etiya.rentACarSpring.businnes.abstracts.UserService;
@@ -26,12 +29,17 @@ public class UserManager implements UserService {
 
     private UserDao userDao;
     private ModelMapperService modelMapperService;
+    private Environment environment;
+    private LanguageWordService languageWordService;
 
     @Autowired
-    public UserManager(UserDao userDao, ModelMapperService modelMapperService) {
+    public UserManager(UserDao userDao, ModelMapperService modelMapperService, Environment environment,
+                       LanguageWordService languageWordService) {
         super();
         this.userDao = userDao;
         this.modelMapperService = modelMapperService;
+        this.environment = environment;
+        this.languageWordService = languageWordService;
     }
 
     @Override
@@ -41,33 +49,33 @@ public class UserManager implements UserService {
                 .map(user -> modelMapperService.forDto().map(user, UserSearchListDto.class))
                 .collect(Collectors.toList());
 
-        return new SuccesDataResult<List<UserSearchListDto>>(response);
+        return new SuccesDataResult<List<UserSearchListDto>>(response, languageWordService.getByLanguageAndKeyId(Messages.UserListed));
     }
 
     @Override
     public Result add(CreateUserRequest createUserRequest) {
         User user = modelMapperService.forRequest().map(createUserRequest, User.class);
         this.userDao.save(user);
-        return new SuccesResult("Ekleme İslemi Basarili");
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.UserAdded));
     }
 
     @Override
     public Result update(UpdateUserRequest updateUserRequest) {
         User user = modelMapperService.forRequest().map(updateUserRequest, User.class);
         this.userDao.save(user);
-        return new SuccesResult("Guncelleme İslemi Basarili");
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.UserUpdated));
     }
 
     @Override
     public Result delete(DeleteUserRequest deleteUserRequest) {
         this.userDao.deleteById(deleteUserRequest.getUserId());
-        return new SuccesResult("Silme İslemi Basarili");
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.UserDeleted));
     }
 
     @Override
     public Result existByEmail(String email) {
         if (this.userDao.existsByEmail(email)) {
-            return new ErrorResult("Mail mevcut değil");
+            return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.MailNotValid));
         }
         return new SuccesResult();
     }
@@ -90,4 +98,10 @@ public class UserManager implements UserService {
         return userDao.getById(userId);
     }
 
+    public Result existByUserId (int userId) {
+        if (!this.userDao.existsById(userId)){
+            return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.UserNotExist));
+        }
+        return new SuccesResult();
+    }
 }

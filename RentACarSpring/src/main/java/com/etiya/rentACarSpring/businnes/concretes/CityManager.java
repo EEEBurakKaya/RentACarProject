@@ -1,14 +1,16 @@
 package com.etiya.rentACarSpring.businnes.concretes;
 
+import com.etiya.rentACarSpring.businnes.abstracts.message.LanguageWordService;
 import com.etiya.rentACarSpring.businnes.dtos.CitySearchListDto;
 import com.etiya.rentACarSpring.core.utilities.businnessRules.BusinnessRules;
 import com.etiya.rentACarSpring.core.utilities.results.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import com.etiya.rentACarSpring.businnes.abstracts.CityService;
-import com.etiya.rentACarSpring.businnes.constants.Messages;
+import com.etiya.rentACarSpring.businnes.abstracts.constants.Messages;
 import com.etiya.rentACarSpring.businnes.request.CityRequest.CreateCityRequest;
 import com.etiya.rentACarSpring.businnes.request.CityRequest.DeleteCityRequest;
 import com.etiya.rentACarSpring.businnes.request.CityRequest.UpdateCityRequest;
@@ -24,12 +26,16 @@ public class CityManager implements CityService {
 
     private CityDao cityDao;
     private ModelMapperService modelMapperService;
+    private Environment environment;
+    private LanguageWordService languageWordService;
 
     @Autowired
-    public CityManager(CityDao cityDao, ModelMapperService modelMapperService) {
+    public CityManager(CityDao cityDao, ModelMapperService modelMapperService, Environment environment, LanguageWordService languageWordService) {
         super();
         this.cityDao = cityDao;
         this.modelMapperService = modelMapperService;
+        this.environment = environment;
+        this.languageWordService = languageWordService;
     }
 
     @Override
@@ -39,7 +45,7 @@ public class CityManager implements CityService {
                 .map(city -> modelMapperService.forDto().map(city, CitySearchListDto.class))
                 .collect(Collectors.toList());
 
-        return new SuccesDataResult<List<CitySearchListDto>>(response);
+        return new SuccesDataResult<List<CitySearchListDto>>(response, languageWordService.getByLanguageAndKeyId(Messages.CityListed));
     }
 
     @Override
@@ -51,7 +57,7 @@ public class CityManager implements CityService {
 
         City city = modelMapperService.forRequest().map(createCityRequest, City.class);
         this.cityDao.save(city);
-        return new SuccesResult(Messages.addedCity);
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.CityAdded));
     }
 
     @Override
@@ -63,7 +69,7 @@ public class CityManager implements CityService {
         }
         City city = modelMapperService.forRequest().map(updateCityRequest, City.class);
         this.cityDao.save(city);
-        return new SuccesResult(Messages.updatedCity);
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.CityUpdated));
     }
 
     @Override
@@ -74,18 +80,18 @@ public class CityManager implements CityService {
             return result;
         }
         this.cityDao.deleteById(deleteCityRequest.getCityId());
-        return new SuccesResult(Messages.deletedCity);
+        return new SuccesResult(languageWordService.getByLanguageAndKeyId(Messages.CityDeleted));
     }
 
     @Override
     public DataResult<City> getById(int cityId) {
-        return new SuccesDataResult<City>(this.cityDao.getById(cityId));
+        return new SuccesDataResult<City>(this.cityDao.getById(cityId), languageWordService.getByLanguageAndKeyId(Messages.CityListed));
     }
 
     private Result checkCityNameDublicated(String cityName) {
         City city = this.cityDao.getByCityName(cityName);
         if (city != null) {
-            return new ErrorResult("Şehir kayıtlı.");
+            return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.CityDublicated));
         }
         return new SuccesResult();
     }
@@ -93,7 +99,7 @@ public class CityManager implements CityService {
     @Override
     public Result checkIfCityExists(int cityId) {
         if (!this.cityDao.existsById(cityId)) {
-            return new ErrorResult("cityId mevcut değil");
+            return new ErrorResult(languageWordService.getByLanguageAndKeyId(Messages.CityNotFound));
         }
         return new SuccesResult();
     }
